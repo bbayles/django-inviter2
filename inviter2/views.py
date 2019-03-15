@@ -7,7 +7,12 @@ from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponseRedirect, HttpResponseForbidden
 from django.utils.http import base36_to_int
-from django.urls.exceptions import NoReverseMatch
+
+try:
+    from django.urls.exceptions import NoReverseMatch
+except ImportError:
+    from django.core.urlresolvers import NoReverseMatch
+
 from django.views.generic.base import TemplateView
 
 from .forms import OptOutForm
@@ -44,6 +49,10 @@ class UserMixin(object):
 
     token_generator = import_attribute(TOKEN_GENERATOR)
 
+    @property
+    def forbidden_url(self):
+        return getattr(settings, 'INVITER_FORBIDDEN_REDIRECT', None)
+
     def get_user(self, uidb36):
         try:
             uid_int = base36_to_int(uidb36)
@@ -65,6 +74,14 @@ class UserMixin(object):
         user = self.get_user(uidb36)
 
         if not self.token_generator.check_token(user, token):
+            # Redirect to a standard location if configured.
+            # Assume a reverse-able redirect, fall back to a direct URL
+            if self.forbidden_url:
+                try:
+                    return HttpResponseRedirect(reverse(self.forbidden_url))
+                except NoReverseMatch:
+                    return HttpResponseRedirect(self.forbidden_url)
+
             return HttpResponseForbidden()
 
         return super(UserMixin, self).dispatch(request, user, *args, **kwargs)
@@ -101,11 +118,10 @@ class Register(UserMixin, TemplateView):
 
         if form.is_valid():
             form.save()
+            # Assume a reverse-able redirect, fall back to a direct URL
             try:
                 return HttpResponseRedirect(reverse(self.redirect_url))
             except NoReverseMatch:
-                # If the redirect URL wasn't reversible, try to use it
-                # directly.
                 return HttpResponseRedirect(self.redirect_url)
         return self.render_to_response({'invitee': user, 'form': form})
 

@@ -87,7 +87,7 @@ class InviteTest(TestCase):
         resp = self.client.get(url)
 
         self.assertEqual(200, resp.status_code, resp.status_code)
-        
+
         fields = {
             'email': 'foo@example.com',
             'password1': 'test-1234',
@@ -95,7 +95,7 @@ class InviteTest(TestCase):
         }
         if 'username' in self.required_fields:
             fields.update(username='testuser')
-        
+
         resp = self.client.post(url, fields)
 
         self.assertEqual(302, resp.status_code, resp.content)
@@ -131,7 +131,7 @@ class InviteTest(TestCase):
         url = reverse('inviter2:register', args=url_parts)
         resp = self.client.get(url)
         self.assertEqual(200, resp.status_code, resp.status_code)
-        
+
         fields = {
             'email': 'foo@example.com',
             'password1': 'test-1234',
@@ -139,7 +139,7 @@ class InviteTest(TestCase):
         }
         if 'username' in self.required_fields:
             fields.update(username='testuser')
-        
+
         resp = self.client.post(url, fields)
         self.assertEqual(200, resp.status_code, resp.content)
         self.assertIn(
@@ -151,6 +151,31 @@ class InviteTest(TestCase):
             resp = self.client.post(url, fields)
             self.assertEqual(302, resp.status_code, resp.content)
             self.assertEqual(resp['Location'], 'http://example.com/')
+
+    def test_forbidden_url(self):
+        # URL redirect
+        with self.settings(INVITER_FORBIDDEN_REDIRECT='http://example.org/'):
+            user, sent = invite("foo@example.com", self.inviter)
+            self.assertTrue(sent)
+            uid = int_to_base36(self.existing.id)
+            token = token_generator.make_token(user)
+            url = reverse('inviter2:register', args=(uid, token))
+            resp = self.client.get(url)
+            self.assertEqual(302, resp.status_code, resp.status_code)
+            self.assertEqual(resp['Location'], 'http://example.org/')
+
+        # reverse-able redirect
+        with self.settings(INVITER_FORBIDDEN_REDIRECT='inviter2:done'):
+            user, sent = invite("foo@example.com", self.inviter)
+            self.assertTrue(sent)
+            uid = int_to_base36(self.existing.id)
+            token = token_generator.make_token(user)
+            url = reverse('inviter2:register', args=(uid, token))
+            resp = self.client.get(url)
+            self.assertEqual(302, resp.status_code, resp.status_code)
+            self.assertTrue(
+                resp['Location'].endswith(reverse('inviter2:done'))
+            )
 
     def test_get_user(self):
         mixin = UserMixin()
