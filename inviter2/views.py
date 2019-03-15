@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponseRedirect, HttpResponseForbidden
 from django.utils.http import base36_to_int
+from django.urls.exceptions import NoReverseMatch
 from django.views.generic.base import TemplateView
 
 from .forms import OptOutForm
@@ -102,7 +103,9 @@ class Register(UserMixin, TemplateView):
             form.save()
             try:
                 return HttpResponseRedirect(reverse(self.redirect_url))
-            except:
+            except NoReverseMatch:
+                # If the redirect URL wasn't reversible, try to use it
+                # directly.
                 return HttpResponseRedirect(self.redirect_url)
         return self.render_to_response({'invitee': user, 'form': form})
 
