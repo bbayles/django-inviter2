@@ -98,12 +98,12 @@ There are a couple of editable settings
     :type: str
 
     The form to be used when an invited user signs up.
-    
+
 .. attribute:: INVITER_FORM_USER_KWARG
 
     :Default: ``instance``
     :type: str
-    
+
     The name of the kwarg field to pass to the ``INVITER_FORM`` with the user object.
 
 .. attribute:: INVITER_REDIRECT
@@ -113,6 +113,19 @@ There are a couple of editable settings
 
     The URL to redirect the user to when the signup completes. This is either a
     URL to reverse via ``reverse(INVITER_REDIRECT)`` or a simple string.
+    Reversing the URL is tried before using the string.
+
+.. attribute:: INVITER_FORBIDDEN_REDIRECT
+
+    :Default: ``None``
+    :type: str
+
+    The URL to redirect the user to when a user visits a signup page with
+    invalid attributes. By default a 403 Forbidden response will be returned.
+    If this setting is provided a 302 response will be return, redirecting to
+    specified location.
+    Provide either a URL to reverse via  ``reverse(INVITER_FORBIDDEN_REDIRECT)``
+    or a simple string.
     Reversing the URL is tried before using the string.
 
 .. attribute:: INVITER_TOKEN_GENERATOR
